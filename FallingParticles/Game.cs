@@ -2,16 +2,13 @@
 {
     internal class Game
     {
-        private int paddlePosition;
-        private int paddleMoveDistance = 6;
-        private string paddle = "========";
-        private List<Particle> particles = new List<Particle>();
-        private int level;
-        private int score;
-        private int gameRoundsBetweenSpawn;
-        private readonly Random random = new Random();
+        private readonly List<Particle> _particles = new List<Particle>();
+        private int _level;
+        private int _score;
+        private int _gameRoundsBetweenSpawn;
         private int _levelCount;
         private int _roundCount;
+        private readonly Paddle _paddle;
         public bool IsRunning { get; private set; }
 
         public Game()
@@ -20,23 +17,21 @@
             Console.WindowWidth = 80;
             _levelCount = 0;
             _roundCount = 45;
-            var centerX = Console.WindowWidth / 2;
-            paddlePosition = centerX - (centerX % paddleMoveDistance);
-            particles.Clear();
             IsRunning = true;
-            score = 0;
-            level = 1;
+            _score = 0;
+            _level = 1;
             InitGameRoundsBetweenSpawn();
+            _paddle = new Paddle();
         }
         void InitGameRoundsBetweenSpawn()
         {
-            gameRoundsBetweenSpawn = 50 / level;
+            _gameRoundsBetweenSpawn = 50 / _level;
         }
 
         public void RunOneGameLoop()
         {
             DrawGame();
-            MovePaddle();
+            _paddle.Move();
             MoveParticles();
             var hasLostParticle = CheckLostParticle();
             if (hasLostParticle)
@@ -44,102 +39,67 @@
                 IsRunning = false;
                 return;
             }
-            if (_roundCount >= gameRoundsBetweenSpawn)
+            if (_roundCount >= _gameRoundsBetweenSpawn)
             {
                 SpawnParticles();
                 InitGameRoundsBetweenSpawn();
                 _roundCount = 0;
             }
-
             _roundCount++;
             _levelCount++;
             if (_levelCount == 100)
             {
                 _levelCount = 0;
-                level++;
+                _level++;
             }
             Thread.Sleep(100);
         }
 
         public void ShowGameOver()
         {
-            var text = "Game Over! Press ENTER to restart";
-            Console.SetCursorPosition(40 - text.Length / 2, 5);
-            Console.WriteLine(text);
+            GameConsole.WriteCentered(5, "Game Over! Press ENTER to restart");
             Console.ReadLine();
         }
 
         void DrawGame()
         {
             Console.Clear();
-            Console.SetCursorPosition(60, 0);
-            Console.Write($"Score: {score}");
-            Console.SetCursorPosition(71, 0);
-            Console.Write($"Level: {level}");
-            Console.SetCursorPosition(paddlePosition, Console.WindowHeight - 1);
-            Console.Write(paddle);
-
-            foreach (var particle in particles)
+            GameConsole.WriteRightAligned(79, 0, $"Score: {_score}");
+            GameConsole.WriteRightAligned(69, 0, $"Level: {_level}");
+            _paddle.Show();
+            foreach (var particle in _particles)
             {
-                var particleX = (int)Math.Floor(particle.X);
-                var particleY = (int)Math.Floor(particle.Y);
-                Console.SetCursorPosition(particleX, particleY);
-                Console.Write("O");
-            }
-        }
-
-        void MovePaddle()
-        {
-            if (Console.KeyAvailable)
-            {
-                var key = Console.ReadKey(true);
-                var moveLeft = key.Key == ConsoleKey.LeftArrow && paddlePosition >= paddleMoveDistance;
-                var moveRight = key.Key == ConsoleKey.RightArrow && paddlePosition < Console.WindowWidth - paddle.Length;
-                if (moveLeft || moveRight)
-                {
-                    var direction = moveLeft ? -1 : 1;
-                    paddlePosition += direction * 3 * paddle.Length / 4;
-                }
+                particle.Show();
             }
         }
 
         void MoveParticles()
         {
-            for (var index = particles.Count - 1; index >= 0; index--)
+            for (var index = _particles.Count - 1; index >= 0; index--)
             {
-                var particle = particles[index];
-                particle.Y += 0.5f;
-                if (particle.Y > Console.WindowHeight - 1)
+                var particle = _particles[index];
+                var remove = particle.MoveAndCheckForExit();
+                if (remove)
                 {
-                    score++;
-                    particles.Remove(particle);
+                    _score++;
+                    _particles.Remove(particle);
                 }
             }
         }
 
         bool CheckLostParticle()
         {
-            foreach (var particle in particles)
+            foreach (var particle in _particles)
             {
-                if ((particle.X < paddlePosition || particle.X > paddlePosition + paddle.Length)
-                    && particle.Y == Console.WindowHeight - 1)
-                {
-                    return true;
-                }
+                if (particle.DidMiss(_paddle)) return true;
             }
-
             return false;
         }
 
         void SpawnParticles()
         {
-            var newParticle = new Particle
-            {
-                X = random.Next(0, Console.WindowWidth),
-                Y = 0
-            };
-            particles.Add(newParticle);
+            var newParticle = new Particle();
+            _particles.Add(newParticle);
         }
-
     }
 }
