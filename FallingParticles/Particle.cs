@@ -2,8 +2,8 @@
 {
     internal class Particle
     {
-        public float _x;
-        public float _y;
+        private float _x;
+        private float _y;
         public int X => (int)Math.Floor(_x);
         public int Y => (int)Math.Floor(_y);
         private static Random random = new Random();

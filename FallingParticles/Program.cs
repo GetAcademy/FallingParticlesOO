@@ -1,8 +1,11 @@
 ﻿using FallingParticles;
 
-var game = new Game();
-while (game.IsRunning)
+while (true)
 {
-    game.RunOneGameLoop();
+    var game = new Game();
+    while (game.IsRunning)
+    {
+        game.RunOneGameLoop();
+    }
+    game.ShowGameOver();
 }
-game.ShowGameOver();
